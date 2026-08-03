@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <title>Вход — GreenAsk</title>
+    <meta name="description" content="Войдите в GreenAsk, чтобы участвовать в обсуждениях.">
+    <link rel="canonical" href="https://green.ask.l.cd/auth.html">
+    
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://green.ask.l.cd/auth.html">
+    <meta property="og:title" content="Вход — GreenAsk">
+    <meta property="og:description" content="Войдите в GreenAsk, чтобы участвовать в обсуждениях.">
+    <meta property="og:image" content="https://green.ask.l.cd/logo-og.png">
+    
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Вход — GreenAsk">
+    <meta name="twitter:description" content="Войдите в GreenAsk, чтобы участвовать в обсуждениях.">
+    <meta name="twitter:image" content="https://green.ask.l.cd/logo-twitter.png">
+    
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f9d58 0%, #0b7a44 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        @keyframes slideUp { from { transform: translateY(30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+        
+        .auth-box { 
+            background: white; padding: 32px 28px; border-radius: 12px; 
+            width: 100%; max-width: 360px;
+            display: flex; flex-direction: column; gap: 14px; 
+            box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+            animation: slideUp 0.5s ease;
+        }
+        .auth-box .logo-area { text-align: center; margin-bottom: 4px; }
+        .auth-box .logo-area h1 { 
+            font-size: 28px; font-weight: 500; 
+            background: linear-gradient(135deg, #0f9d58, #0b7a44);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+        .auth-box .logo-area .subtitle { font-size: 14px; color: #757575; margin-top: 2px; }
+        .auth-box .divider { border: none; border-top: 1px solid #e0e0e0; margin: 2px 0 4px; }
+        .auth-box input { 
+            padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 8px; 
+            font-size: 16px; transition: border-color 0.3s;
+            background: #fafafa;
+        }
+        .auth-box input:focus { 
+            outline: none; border-color: #0f9d58; background: white;
+            box-shadow: 0 0 0 3px rgba(15, 157, 88, 0.15);
+        }
+        .auth-box .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+        .auth-box .btn {
+            padding: 12px; border: none; border-radius: 8px; cursor: pointer;
+            font-weight: 500; text-transform: uppercase; font-size: 14px;
+            transition: all 0.25s ease; letter-spacing: 0.5px;
+        }
+        .auth-box .btn-primary { 
+            background: #0f9d58; color: white; 
+            box-shadow: 0 2px 8px rgba(15,157,88,0.3);
+        }
+        .auth-box .btn-primary:hover { background: #0b7a44; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,157,88,0.4); }
+        .auth-box .btn-secondary { 
+            background: transparent; color: #0f9d58; border: 2px solid #0f9d58;
+        }
+        .auth-box .btn-secondary:hover { background: #f0faf4; }
+        .auth-box .error-msg { color: #db4437; font-size: 13px; text-align: center; min-height: 20px; }
+        .auth-box .back-link { text-align: center; font-size: 13px; }
+        .auth-box .back-link a { color: #0f9d58; text-decoration: none; }
+        .auth-box .back-link a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="auth-box">
+        <div class="logo-area">
+            <h1>GreenAsk</h1>
+            <div class="subtitle">Задавай вопросы. Делитесь мнениями.</div>
+        </div>
+        <hr class="divider">
+        <div id="auth-error" class="error-msg"></div>
+        <input type="text" id="auth-nick" placeholder="Никнейм" autocomplete="username">
+        <input type="password" id="auth-pass" placeholder="Пароль" autocomplete="current-password">
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="handleAuth(false)">Войти</button>
+            <button class="btn btn-secondary" onclick="handleAuth(true)">Создать аккаунт</button>
+        </div>
+        <div class="back-link"><a href="/">← На главную</a></div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBkd_rtqteAT7LCq9WptfQWLvMBI1igm14",
+            authDomain: "sosial-978d1.firebaseapp.com",
+            projectId: "sosial-978d1",
+            storageBucket: "sosial-978d1.firebasestorage.app",
+            messagingSenderId: "546379463021",
+            appId: "1:546379463021:web:ffdea79f85626b945fc264",
+            measurementId: "G-B6R4BMT0M6"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        function handleAuth(isRegister) {
+            const nick = document.getElementById('auth-nick').value.trim();
+            const pass = document.getElementById('auth-pass').value;
+            const errorEl = document.getElementById('auth-error');
+            errorEl.innerText = '';
+            
+            if (!nick || !pass) {
+                errorEl.innerText = "Введите никнейм и пароль";
+                return;
+            }
+            if (nick.includes(" ")) {
+                errorEl.innerText = "Никнейм не должен содержать пробелы";
+                return;
+            }
+            const passRegex = /^[a-zA-Z0-9_]{6,}$/;
+            if (!passRegex.test(pass)) {
+                errorEl.innerText = "Пароль: от 6 символов, только латиница, цифры, _";
+                return;
+            }
+            
+            // 🔥 ИСПРАВЛЕНО: используем валидный email
+            const email = nick.toLowerCase() + "@greenask.user";
+            
+            if (isRegister) {
+                auth.createUserWithEmailAndPassword(email, pass)
+                    .then(cred => cred.user.updateProfile({ displayName: nick }))
+                    .then(() => { window.location.href = '/'; })
+                    .catch(e => {
+                        if (e.code === 'auth/email-already-in-use') {
+                            errorEl.innerText = "Пользователь с таким ником уже существует";
+                        } else {
+                            errorEl.innerText = "Ошибка: " + e.message;
+                        }
+                    });
+            } else {
+                auth.signInWithEmailAndPassword(email, pass)
+                    .then(() => { window.location.href = '/'; })
+                    .catch(e => {
+                        if (e.code === 'auth/user-not-found') {
+                            errorEl.innerText = "Пользователь не найден. Зарегистрируйтесь!";
+                        } else if (e.code === 'auth/wrong-password') {
+                            errorEl.innerText = "Неверный пароль";
+                        } else {
+                            errorEl.innerText = "Ошибка: " + e.message;
+                        }
+                    });
+            }
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (user) window.location.href = '/';
+        });
+    </script>
+</body>
+</html>

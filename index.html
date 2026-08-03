@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- SEO и соцсети -->
+    <title>GreenAsk — платформа для общения</title>
+    <meta name="description" content="GreenAsk — сообщество, где можно задавать вопросы и делиться мнениями. Присоединяйся к обсуждениям!">
+    <meta name="keywords" content="форум, общение, вопросы, ответы, сообщество, greenask">
+    <link rel="canonical" href="https://green.ask.l.cd/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://green.ask.l.cd/">
+    <meta property="og:title" content="GreenAsk — платформа для общения">
+    <meta property="og:description" content="Сообщество для вопросов, ответов и интересных обсуждений. Присоединяйся!">
+    <meta property="og:image" content="https://green.ask.l.cd/logo-og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="GreenAsk — платформа для общения">
+    <meta name="twitter:description" content="Сообщество для вопросов, ответов и интересных обсуждений.">
+    <meta name="twitter:image" content="https://green.ask.l.cd/logo-twitter.png">
+    
+    <!-- Иконки -->
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            background-color: #eceff1; color: #212121;
+            overflow-x: hidden;
+        }
+
+        /* --- Стили авторизации (Google+ / Material Design) --- */
+        .auth-screen { 
+            position: fixed; top:0; left:0; width: 100%; height: 100%; 
+            background: linear-gradient(135deg, #0f9d58 0%, #0b7a44 100%);
+            z-index: 1000; 
+            display: flex; align-items: center; justify-content: center;
+            animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        @keyframes slideUp { from { transform: translateY(30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+        
+        .auth-box { 
+            background: white; padding: 32px 28px; border-radius: 12px; 
+            width: 90%; max-width: 360px;
+            display: flex; flex-direction: column; gap: 14px; 
+            box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+            animation: slideUp 0.5s ease;
+        }
+        .auth-box .logo-area { text-align: center; margin-bottom: 4px; }
+        .auth-box .logo-area h1 { 
+            font-size: 28px; font-weight: 500; 
+            background: linear-gradient(135deg, #0f9d58, #0b7a44);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+        .auth-box .logo-area .subtitle { font-size: 14px; color: #757575; margin-top: 2px; }
+        .auth-box .divider { border: none; border-top: 1px solid #e0e0e0; margin: 2px 0 4px; }
+        .auth-box input { 
+            padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 8px; 
+            font-size: 16px; transition: border-color 0.3s;
+            background: #fafafa;
+        }
+        .auth-box input:focus { 
+            outline: none; border-color: #0f9d58; background: white;
+            box-shadow: 0 0 0 3px rgba(15, 157, 88, 0.15);
+        }
+        .auth-box .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+        .auth-box .btn {
+            padding: 12px; border: none; border-radius: 8px; cursor: pointer;
+            font-weight: 500; text-transform: uppercase; font-size: 14px;
+            transition: all 0.25s ease; letter-spacing: 0.5px;
+        }
+        .auth-box .btn-primary { 
+            background: #0f9d58; color: white; 
+            box-shadow: 0 2px 8px rgba(15,157,88,0.3);
+        }
+        .auth-box .btn-primary:hover { background: #0b7a44; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,157,88,0.4); }
+        .auth-box .btn-secondary { 
+            background: transparent; color: #0f9d58; border: 2px solid #0f9d58;
+        }
+        .auth-box .btn-secondary:hover { background: #f0faf4; }
+        .auth-box .error-msg { color: #db4437; font-size: 13px; text-align: center; min-height: 20px; }
+        
+        /* --- Остальные стили (основное приложение) --- */
+        #main-app {
+            display: none; flex-direction: column; min-height: 100vh; padding-bottom: 80px; 
+        }
+        
+        .header {
+            background-color: #0f9d58; color: #ffffff; padding: 12px 16px;
+            display: flex; flex-direction: column; gap: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); position: sticky; top: 0; z-index: 10;
+        }
+        .header-top, .header-left { display: flex; align-items: center; }
+        .header-top { justify-content: space-between; }
+        .header-left { gap: 16px; }
+        .menu-icon { display: flex; flex-direction: column; gap: 4px; cursor: pointer; width: 22px; padding: 4px; }
+        .menu-icon span { display: block; height: 2px; width: 100%; background-color: #ffffff; border-radius: 2px; }
+        .user-name, .room-name { font-size: 18px; font-weight: 400; }
+        .room-name { font-weight: 500; }
+        .nav-links { display: flex; gap: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; }
+        .nav-btn {
+            background: none; border: none; color: #ffffff; padding: 6px 12px;
+            font-size: 13px; font-weight: 500; text-transform: uppercase; cursor: pointer; border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+        .nav-btn.active { background-color: rgba(255, 255, 255, 0.25); }
+
+        .sidebar-drawer {
+            position: fixed; top: 0; left: -280px; width: 280px; height: 100%;
+            background-color: #ffffff; box-shadow: 3px 0 10px rgba(0,0,0,0.3); z-index: 100;
+            transition: left 0.3s ease; display: flex; flex-direction: column;
+        }
+        .sidebar-drawer.open { left: 0; }
+        .drawer-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.4); z-index: 99; display: none; }
+        .drawer-overlay.show { display: block; }
+        .drawer-header { background-color: #0f9d58; color: white; padding: 20px 16px; font-size: 18px; font-weight: 500; flex-shrink: 0; }
+        .drawer-scroll-content { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; }
+        
+        .topic-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid #f5f5f5; cursor: pointer; flex-shrink: 0; }
+        .topic-item:hover { background: #f9f9f9; }
+        .topic-avatar { width: 36px; height: 36px; border-radius: 50%; background-color: #00acc1; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; flex-shrink: 0; }
+
+        .drawer-section-title { font-size: 12px; font-weight: bold; color: #757575; padding: 16px 16px 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .community-menu-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #f5f5f5; gap: 8px; }
+        .community-menu-item:hover { background: #f9f9f9; }
+        .community-info { display: flex; align-items: center; gap: 10px; flex-grow: 1; cursor: pointer; overflow: hidden; }
+        .community-name-text { font-size: 14px; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+        .sub-btn { background: none; border: 1px solid #0f9d58; color: #0f9d58; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: all 0.2s ease; flex-shrink: 0; }
+        .sub-btn.active { background-color: #0f9d58; color: white; }
+        .sub-btn:hover { opacity: 0.8; }
+
+        .page-section { display: none; padding: 16px 8px; }
+        .page-section.active { display: block; }
+        
+        .post-container { background-color: #ffffff; border-radius: 4px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); margin-bottom: 16px; }
+        .post-header-meta { font-size: 11px; color: #757575; margin-bottom: 3px; font-weight: 500; padding-left: 2px; }
+        .post-author-row { display: flex; align-items: center; margin-bottom: 10px; }
+        .author-avatar { width: 32px; height: 32px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 8px; flex-shrink: 0; }
+        .author-name { font-size: 15px; font-weight: 600; color: #212121; }
+        
+        .post-main-title { font-size: 18px; font-weight: 500; margin-bottom: 8px; }
+        .post-text { font-size: 14px; line-height: 1.5; color: #424242; margin-bottom: 12px; word-break: break-word; }
+        .post-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #eee; padding-top: 8px; gap: 6px; flex-wrap: wrap; }
+        .comments-toggle-btn { background: none; border: none; color: #0f9d58; font-size: 13px; font-weight: 500; cursor: pointer; text-transform: uppercase; }
+        .comments-toggle-btn:hover { text-decoration: underline; }
+        
+        .reddit-rating { display: flex; align-items: center; background-color: #f5f5f5; border-radius: 20px; gap: 2px; padding: 2px 4px; }
+        .vote-button { 
+            background: none; border: none; font-size: 20px; width: 32px; height: 32px; 
+            cursor: pointer; font-weight: bold; color: #9e9e9e;
+            transition: color 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        }
+        .vote-button:active { transform: scale(0.8); }
+        .vote-button.btn-plus.active { color: #0f9d58; transform: scale(1.15); }
+        .vote-button.btn-minus.active { color: #db4437; transform: scale(1.15); }
+        .rating-count { font-size: 14px; font-weight: bold; min-width: 20px; text-align: center; color: #424242; transition: color 0.3s ease; }
+
+        .popular-comment-box { background-color: #f9f9f9; padding: 8px 12px; border-left: 3px solid #0f9d58; margin-bottom: 12px; display: none; border-radius: 0 4px 4px 0; }
+        .label-popular { font-size: 11px; color: #0f9d58; font-weight: bold; display: block; margin-bottom: 4px; }
+
+        .profile-card { background-color: white; padding: 20px; border-radius: 4px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.12); margin-bottom: 20px; }
+        .profile-avatar { width: 64px; height: 64px; background-color: #0f9d58; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 12px; }
+        .profile-status { font-size: 13px; color: #757575; margin-top: 4px; }
+        .profile-stats { display: flex; justify-content: space-around; margin-top: 16px; border-top: 1px solid #eee; padding-top: 16px; }
+        .stat-item { display: flex; flex-direction: column; }
+        .stat-num { font-size: 18px; font-weight: bold; }
+        .stat-label { font-size: 12px; color: #757575; }
+        .section-title { font-size: 16px; font-weight: 500; margin-bottom: 12px; padding-left: 4px; }
+
+        .fab-button {
+            position: fixed; bottom: 16px; right: 16px; width: 56px; height: 56px; border-radius: 50%;
+            background-color: #0f9d58; color: white; border: none; font-size: 24px; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 5; transition: transform 0.2s;
+        }
+        .fab-button:active { transform: scale(0.9); }
+
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 200; display: none; align-items: center; justify-content: center; }
+        .modal-content { background-color: white; width: 90%; max-width: 500px; padding: 20px; border-radius: 8px; display: flex; flex-direction: column; gap: 12px; max-height: 90vh; }
+        .modal-title { font-size: 18px; font-weight: 500; }
+        .modal-input, .modal-textarea, .modal-select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 16px; background-color: #fff; }
+        .modal-textarea { height: 100px; resize: none; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+        .btn { padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; text-transform: uppercase; font-size: 14px; }
+        .btn-close { background: #e0e0e0; color: #424242; }
+        .btn-close:hover { background: #d0d0d0; }
+        .btn-primary { background-color: #0f9d58; color: white; }
+        .btn-primary:hover { background: #0b7a44; }
+        
+        .comments-list { max-height: 330px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 5px; padding-right: 4px; }
+        .comment-item { 
+            background: #f5f5f5; padding: 10px; border-radius: 4px; font-size: 14px; 
+            display: flex; flex-direction: column; gap: 6px; position: relative;
+        }
+        .comment-item.is-reply { margin-left: 24px; border-left: 3px solid #00acc1; background: #edf8f9; }
+        .comment-main-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+        .comment-text-side { flex-grow: 1; word-break: break-word; }
+        .comment-meta { font-size: 11px; color: #757575; margin-bottom: 2px; }
+        .comment-actions-row { display: flex; gap: 12px; padding-top: 2px; }
+        .comment-action-btn { background: none; border: none; font-size: 11px; color: #0f9d58; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .comment-action-btn:hover { text-decoration: underline; }
+        
+        .reply-target-indicator {
+            background-color: #e8f5e9; border-left: 4px solid #0f9d58; padding: 6px 10px;
+            font-size: 12px; display: none; justify-content: space-between; align-items: center; border-radius: 2px;
+        }
+
+        .delete-post-btn { background: none; border: none; color: #db4437; font-size: 13px; font-weight: 500; cursor: pointer; text-transform: uppercase; }
+        .delete-post-btn:hover { text-decoration: underline; }
+
+        @media (max-width: 480px) {
+            .auth-box { padding: 24px 20px; }
+            .auth-box .logo-area h1 { font-size: 24px; }
+            .header { padding: 10px 12px; }
+            .post-container { padding: 12px; }
+            .fab-button { width: 48px; height: 48px; font-size: 20px; bottom: 12px; right: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ========== ЭКРАН АВТОРИЗАЦИИ ========== -->
+    <div id="auth-screen" class="auth-screen">
+        <div class="auth-box">
+            <div class="logo-area">
+                <h1>GreenAsk</h1>
+                <div class="subtitle">Задавай вопросы. Делитесь мнениями.</div>
+            </div>
+            <hr class="divider">
+            <div id="auth-error" class="error-msg"></div>
+            <input type="text" id="auth-nick" placeholder="Никнейм" autocomplete="username">
+            <input type="password" id="auth-pass" placeholder="Пароль" autocomplete="current-password">
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="handleAuth(false)">Войти</button>
+                <button class="btn btn-secondary" onclick="handleAuth(true)">Создать аккаунт</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== ОСНОВНОЕ ПРИЛОЖЕНИЕ ========== -->
+    <div id="main-app">
+        <header class="header">
+            <div class="header-top">
+                <div class="header-left">
+                    <div class="menu-icon" onclick="toggleMenu()"><span></span><span></span><span></span></div>
+                    <div class="user-name" id="page-title">Главная</div>
+                </div>
+                <div class="room-name">greenask</div>
+            </div>
+            <nav class="nav-links">
+                <button class="nav-btn active" id="btn-home" onclick="goToFeed(null, null)">Главная</button>
+                <button class="nav-btn" id="btn-profile" onclick="switchTab('profile')">Профиль</button>
+            </nav>
+        </header>
+
+        <div class="drawer-overlay" id="overlay" onclick="toggleMenu()"></div>
+        <div class="sidebar-drawer" id="drawer">
+            <div class="drawer-header">Навигация</div>
+            <div class="drawer-scroll-content">
+                <div class="topic-item" onclick="goToFeed(null, null)">
+                    <div class="topic-avatar">Г</div>
+                    <div>Главная страница</div>
+                </div>
+                <div class="topic-item" onclick="switchTab('profile'); toggleMenu();">
+                    <div class="topic-avatar">П</div>
+                    <div>Мой профиль</div>
+                </div>
+                
+                <div class="drawer-section-title">Сообщества</div>
+                <div style="padding: 0 16px 10px;">
+                    <button class="btn btn-primary" style="width: 100%; font-size: 12px; padding: 8px;" onclick="openModal('create-community-modal')">Создать сообщество</button>
+                </div>
+                <div id="drawer-communities-list"></div>
+
+                <div class="topic-item" onclick="logoutApp();" style="margin-top: auto; border-top: 1px solid #f5f5f5;">
+                    <div class="topic-avatar" style="background-color: #db4437;">В</div>
+                    <div>Выйти из аккаунта</div>
+                </div>
+            </div>
+        </div>
+
+        <main class="page-section active" id="section-home">
+            <div class="profile-card" id="community-profile-card" style="display: none; margin-bottom: 16px;">
+                <div class="profile-avatar" id="comm-prof-ava" style="background-color: #00acc1;">C</div>
+                <h2 class="profile-name" id="comm-prof-name">Название сообщества</h2>
+                <p class="profile-status" id="comm-prof-desc" style="margin-top: 6px; word-break: break-word;">Описание</p>
+                <div class="profile-stats" style="margin-top: 12px; padding-top: 12px;">
+                    <div class="stat-item">
+                        <span class="stat-num" id="comm-prof-subs">0</span>
+                        <span class="stat-label">Подписчиков</span>
+                    </div>
+                </div>
+                <div id="comm-owner-actions" style="display: none; margin-top: 14px; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                    <button class="sub-btn" onclick="editCommunityName()">Изменить имя</button>
+                    <button class="sub-btn" onclick="editCommunityDesc()">Изменить описание</button>
+                </div>
+            </div>
+
+            <div id="posts-container"></div>
+        </main>
+
+        <main class="page-section" id="section-profile">
+            <div class="profile-card">
+                <div class="profile-avatar" id="prof-ava">U</div>
+                <h2 class="profile-name" id="prof-name">Пользователь</h2>
+                <p class="profile-status">Аккаунт привязан к Firebase</p>
+                <div class="profile-stats">
+                    <div class="stat-item"><span class="stat-num" id="user-reputation">0</span><span class="stat-label">Репутация</span></div>
+                    <div class="stat-item"><span class="stat-num" id="user-posts-count">0</span><span class="stat-label">Постов</span></div>
+                </div>
+            </div>
+            <div class="section-title">Моя активность</div>
+            <div id="my-posts-container"></div>
+        </main>
+
+        <button class="fab-button" onclick="openModal('create-post-modal')">+</button>
+
+        <div class="modal" id="create-post-modal">
+            <div class="modal-content">
+                <div class="modal-title">Новая публикация</div>
+                <select id="post-community-select" class="modal-select">
+                    <option value="">Без сообщества (На главную)</option>
+                </select>
+                <input type="text" id="post-title-input" class="modal-input" placeholder="Заголовок поста">
+                <textarea id="post-text-input" class="modal-textarea" placeholder="Текст вашего сообщения..."></textarea>
+                <div class="modal-actions">
+                    <button class="btn btn-close" onclick="closeModal('create-post-modal')">Отмена</button>
+                    <button class="btn btn-primary" id="submit-post-btn">Опубликовать</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="create-community-modal">
+            <div class="modal-content">
+                <div class="modal-title">Создать сообщество</div>
+                <input type="text" id="community-name-input" class="modal-input" placeholder="Название (например: memes)">
+                <textarea id="community-desc-input" class="modal-textarea" placeholder="Описание сообщества..."></textarea>
+                <div class="modal-actions">
+                    <button class="btn btn-close" onclick="closeModal('create-community-modal')">Отмена</button>
+                    <button class="btn btn-primary" id="submit-community-btn">Создать</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="comments-modal">
+            <div class="modal-content">
+                <div class="modal-title">Комментарии</div>
+                
+                <div class="comments-list" id="modal-comments-list"></div>
+                
+                <div class="reply-target-indicator" id="reply-indicator">
+                    <span id="reply-indicator-text">Ответ пользователю...</span>
+                    <span style="color:#db4437; font-weight:bold; cursor:pointer; padding:2px 6px;" onclick="cancelReplyTarget()">✕</span>
+                </div>
+
+                <input type="text" id="comment-input" class="modal-input" placeholder="Написать комментарий...">
+                <div class="modal-actions">
+                    <button class="btn btn-close" onclick="closeModal('comments-modal')">Закрыть</button>
+                    <button class="btn btn-primary" id="submit-comment-btn">Отправить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // 1. FIREBASE КОНФИГ
+        // ============================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBkd_rtqteAT7LCq9WptfQWLvMBI1igm14",
+            authDomain: "sosial-978d1.firebaseapp.com",
+            projectId: "sosial-978d1",
+            storageBucket: "sosial-978d1.firebasestorage.app",
+            messagingSenderId: "546379463021",
+            appId: "1:546379463021:web:ffdea79f85626b945fc264",
+            measurementId: "G-B6R4BMT0M6"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        // ============================================================
+        // 2. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+        // ============================================================
+        let CURRENT_USER = { username: "Аноним", id: null };
+        let activePostId = null;
+        let activeCommentReplyParentId = null;
+        let activeCommunityId = null;
+        let activeCommunityName = null;
+        let userSubscriptions = new Set();
+        let allCommunities = [];
+
+        let unsubscribePosts = null;
+        let unsubscribeComments = null;
+        let unsubscribeCommunities = null;
+        let unsubscribeSubs = null;
+        let unsubscribeCommMeta = null;
+        let unsubscribeCommSubs = null;
+
+        // ============================================================
+        // 3. АВТОРИЗАЦИЯ (исправленная — использует реальный email)
+        // ============================================================
+        function handleAuth(isRegister) {
+            const nick = document.getElementById('auth-nick').value.trim();
+            const pass = document.getElementById('auth-pass').value;
+            const errorEl = document.getElementById('auth-error');
+            errorEl.innerText = '';
+            
+            if (!nick || !pass) {
+                errorEl.innerText = "Введите никнейм и пароль";
+                return;
+            }
+
+            if (nick.includes(" ")) {
+                errorEl.innerText = "Никнейм не должен содержать пробелы";
+                return;
+            }
+
+            const passRegex = /^[a-zA-Z0-9_]{6,}$/;
+            if (!passRegex.test(pass)) {
+                errorEl.innerText = "Пароль: от 6 символов, только латиница, цифры, _";
+                return;
+            }
+            
+            // 🔥 ИСПРАВЛЕНО: используем реальный email с суффиксом
+            // Формат: никнейм + "@greenask.user"
+            // Это валидный email для Firebase
+            const email = nick.toLowerCase() + "@greenask.user";
+            
+            if (isRegister) {
+                auth.createUserWithEmailAndPassword(email, pass)
+                    .then(cred => {
+                        return cred.user.updateProfile({ displayName: nick });
+                    })
+                    .then(() => {
+                        errorEl.innerText = '';
+                        document.getElementById('auth-pass').value = '';
+                    })
+                    .catch(e => {
+                        if (e.code === 'auth/email-already-in-use') {
+                            errorEl.innerText = "Пользователь с таким ником уже существует";
+                        } else if (e.code === 'auth/invalid-email') {
+                            errorEl.innerText = "Недопустимые символы в никнейме";
+                        } else {
+                            errorEl.innerText = "Ошибка: " + e.message;
+                        }
+                    });
+            } else {
+                auth.signInWithEmailAndPassword(email, pass)
+                    .then(() => {
+                        errorEl.innerText = '';
+                        document.getElementById('auth-pass').value = '';
+                    })
+                    .catch(e => {
+                        if (e.code === 'auth/user-not-found') {
+                            errorEl.innerText = "Пользователь не найден. Зарегистрируйтесь!";
+                        } else if (e.code === 'auth/wrong-password') {
+                            errorEl.innerText = "Неверный пароль";
+                        } else {
+                            errorEl.innerText = "Ошибка: " + e.message;
+                        }
+                    });
+            }
+        }
+
+        function logoutApp() {
+            auth.signOut().then(() => {
+                document.getElementById('auth-pass').value = '';
+            });
+        }
+
+        // ============================================================
+        // 4. СЛУШАТЕЛЬ АВТОРИЗАЦИИ
+        // ============================================================
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                CURRENT_USER = { 
+                    username: user.displayName || "Аноним", 
+                    id: user.uid 
+                };
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('main-app').style.display = 'flex';
+                document.getElementById('prof-name').innerText = CURRENT_USER.username;
+                document.getElementById('prof-ava').innerText = CURRENT_USER.username[0].toUpperCase();
+                loadSubscriptions();
+                loadPosts();
+            } else {
+                document.getElementById('main-app').style.display = 'none';
+                document.getElementById('auth-screen').style.display = 'flex';
+                if (unsubscribePosts) unsubscribePosts();
+                if (unsubscribeSubs) unsubscribeSubs();
+                if (unsubscribeCommunities) unsubscribeCommunities();
+            }
+        });
+
+        // ============================================================
+        // 5. ОСНОВНАЯ ЛОГИКА ПРИЛОЖЕНИЯ (без изменений)
+        // ============================================================
+        function loadSubscriptions() {
+            if (unsubscribeSubs) unsubscribeSubs();
+            unsubscribeSubs = db.collection('subscriptions').where('userId', '==', CURRENT_USER.id).onSnapshot(snapshot => {
+                userSubscriptions.clear();
+                snapshot.forEach(doc => {
+                    userSubscriptions.add(doc.data().communityId);
+                });
+                loadCommunities();
+            });
+        }
+
+        function loadCommunities() {
+            if (unsubscribeCommunities) unsubscribeCommunities();
+            unsubscribeCommunities = db.collection('communities').orderBy('name').onSnapshot(snapshot => {
+                allCommunities = [];
+                const drawerList = document.getElementById('drawer-communities-list');
+                const select = document.getElementById('post-community-select');
+                
+                drawerList.innerHTML = "";
+                select.innerHTML = '<option value="">Без сообщества (На главную)</option>';
+
+                snapshot.forEach(doc => {
+                    const comp = doc.data();
+                    comp.id = doc.id;
+                    allCommunities.push(comp);
+
+                    const opt = document.createElement('option');
+                    opt.value = comp.id;
+                    opt.innerText = `${comp.name}`;
+                    select.appendChild(opt);
+
+                    const item = document.createElement('div');
+                    item.className = 'community-menu-item';
+                    
+                    const isSubbed = userSubscriptions.has(comp.id);
+                    const subText = isSubbed ? 'Отписаться' : 'Подписаться';
+                    const subClass = isSubbed ? 'sub-btn active' : 'sub-btn';
+                    item.innerHTML = `
+                        <div class="community-info" onclick="goToFeed('${comp.id}', '${comp.name}')">
+                            <div class="topic-avatar" style="width:28px; height:28px; font-size:11px; margin-right:0; background-color:#0f9d58;"></div>
+                            <div class="community-name-text">${comp.name}</div>
+                        </div>
+                        <button class="${subClass}" onclick="toggleSubscription('${comp.id}', event)">${subText}</button>
+                    `;
+                    item.querySelector('.topic-avatar').innerText = comp.name ? comp.name[0].toUpperCase() : '';
+                    drawerList.appendChild(item);
+                });
+
+                if (activeCommunityId) {
+                    select.value = activeCommunityId;
+                }
+            });
+        }
+
+        function toggleSubscription(communityId, event) {
+            event.stopPropagation();
+            const subId = `${CURRENT_USER.id}_${communityId}`;
+            const subRef = db.collection('subscriptions').doc(subId);
+
+            if (userSubscriptions.has(communityId)) {
+                subRef.delete().catch(err => console.error(err));
+            } else {
+                subRef.set({
+                    userId: CURRENT_USER.id,
+                    communityId: communityId
+                }).catch(err => console.error(err));
+            }
+        }
+
+        function goToFeed(communityId, communityName) {
+            activeCommunityId = communityId;
+            activeCommunityName = communityName;
+            
+            switchTab('home');
+            
+            const homeBtn = document.getElementById('btn-home');
+            const commCard = document.getElementById('community-profile-card');
+            
+            if (unsubscribeCommMeta) unsubscribeCommMeta();
+            if (unsubscribeCommSubs) unsubscribeCommSubs();
+            if (communityId) {
+                homeBtn.innerText = `${communityName}`;
+                homeBtn.classList.add('active');
+                document.getElementById('page-title').innerText = `${communityName}`;
+                
+                commCard.style.display = 'block';
+                
+                unsubscribeCommMeta = db.collection('communities').doc(communityId).onSnapshot(doc => {
+                    if (!doc.exists) return;
+                    const data = doc.data();
+                    document.getElementById('comm-prof-name').innerText = `${data.name}`;
+                    document.getElementById('comm-prof-ava').innerText = data.name ? data.name[0].toUpperCase() : 'C';
+                    document.getElementById('comm-prof-desc').innerText = data.description || 'Описание отсутствует';
+                    
+                    if (data.creatorId === CURRENT_USER.id) {
+                        document.getElementById('comm-owner-actions').style.display = 'flex';
+                    } else {
+                        document.getElementById('comm-owner-actions').style.display = 'none';
+                    }
+                });
+                unsubscribeCommSubs = db.collection('subscriptions').where('communityId', '==', communityId).onSnapshot(snap => {
+                    document.getElementById('comm-prof-subs').innerText = snap.size;
+                });
+            } else {
+                homeBtn.innerText = 'Главная';
+                document.getElementById('page-title').innerText = 'Главная';
+                commCard.style.display = 'none';
+            }
+
+            if (document.getElementById('drawer').classList.contains('open')) {
+                toggleMenu();
+            }
+            loadPosts();
+        }
+
+        function editCommunityName() {
+            if (!activeCommunityId) return;
+            const newName = prompt("Введите новое название сообщества:");
+            if (!newName) return;
+            const cleanName = newName.trim();
+            if (!cleanName) return;
+            db.collection('communities').doc(activeCommunityId).update({ name: cleanName }).then(() => {
+                document.getElementById('page-title').innerText = `${cleanName}`;
+                document.getElementById('btn-home').innerText = `${cleanName}`;
+                activeCommunityName = cleanName;
+            }).catch(err => alert("Ошибка: " + err.message));
+        }
+
+        function editCommunityDesc() {
+            if (!activeCommunityId) return;
+            const newDesc = prompt("Введите новое описание сообщества:");
+            if (newDesc === null) return;
+            db.collection('communities').doc(activeCommunityId).update({ description: newDesc.trim() })
+            .catch(err => alert("Ошибка: " + err.message));
+        }
+
+        document.getElementById('submit-community-btn').addEventListener('click', () => {
+            const name = document.getElementById('community-name-input').value.trim();
+            const desc = document.getElementById('community-desc-input').value.trim();
+            if (!name) return alert("Введите название сообщества!");
+
+            db.collection('communities').add({
+                name: name,
+                description: desc || "Добро пожаловать в сообщество!",
+                creatorId: CURRENT_USER.id,
+                timestamp: Date.now()
+            }).then(() => {
+                document.getElementById('community-name-input').value = "";
+                document.getElementById('community-desc-input').value = "";
+                closeModal('create-community-modal');
+            }).catch(err => alert("Ошибка: " + err.message));
+        });
+
+        document.getElementById('submit-post-btn').addEventListener('click', () => {
+            const title = document.getElementById('post-title-input').value.trim();
+            const text = document.getElementById('post-text-input').value.trim();
+            const communitySelect = document.getElementById('post-community-select');
+            
+            const chosenCommunityId = communitySelect.value || null;
+            let chosenCommunityName = null;
+            
+            if (chosenCommunityId) {
+                const found = allCommunities.find(c => c.id === chosenCommunityId);
+                if (found) chosenCommunityName = found.name;
+            }
+            
+            if (!title || !text) return alert("Заполните все поля!");
+
+            const newPostRef = db.collection('posts').doc();
+            newPostRef.set({
+                id: newPostRef.id, title, text,
+                author: CURRENT_USER.username, 
+                authorId: CURRENT_USER.id, 
+                rating: 0, votes: {}, timestamp: Date.now(),
+                communityId: chosenCommunityId,
+                communityName: chosenCommunityName
+            }).then(() => {
+                document.getElementById('post-title-input').value = "";
+                document.getElementById('post-text-input').value = "";
+                closeModal('create-post-modal');
+            }).catch(err => alert("Ошибка: " + err.message));
+        });
+
+        function loadPosts() {
+            if (unsubscribePosts) unsubscribePosts();
+            let query = db.collection('posts');
+            if (activeCommunityId) {
+                query = query.where('communityId', '==', activeCommunityId);
+            }
+
+            unsubscribePosts = query.onSnapshot((snapshot) => {
+                const container = document.getElementById('posts-container');
+                const myContainer = document.getElementById('my-posts-container');
+                let userPostsCount = 0, userReputation = 0;
+                
+                let postsArray = [];
+                snapshot.forEach(doc => {
+                    postsArray.push(doc.data());
+                });
+                
+                postsArray.sort((a, b) => b.timestamp - a.timestamp);
+
+                postsArray.forEach(post => {
+                    if (post.authorId === CURRENT_USER.id) {
+                        userPostsCount++;
+                        userReputation += post.rating || 0;
+                    }
+
+                    let cardMain = document.getElementById(`post-${post.id}`);
+                    if (!cardMain) {
+                        cardMain = createPostHTML(post, false);
+                        loadPopularComment(post.id, false);
+                    } else {
+                        updateVisually(cardMain, post);
+                    }
+                    container.appendChild(cardMain);
+                    if (post.authorId === CURRENT_USER.id) {
+                        let cardProf = document.getElementById(`post-${post.id}-prof`);
+                        if (!cardProf) {
+                            cardProf = createPostHTML(post, true);
+                            loadPopularComment(post.id, true);
+                        } else {
+                            updateVisually(cardProf, post);
+                        }
+                        myContainer.appendChild(cardProf);
+                    }
+                });
+                Array.from(container.children).forEach(card => {
+                    const id = card.id.replace('post-', '');
+                    if (!postsArray.some(p => p.id === id)) card.remove();
+                });
+                Array.from(myContainer.children).forEach(card => {
+                    const id = card.id.replace('post-', '').replace('-prof', '');
+                    if (!postsArray.some(p => p.id === id && p.authorId === CURRENT_USER.id)) card.remove();
+                });
+                document.getElementById('user-posts-count').innerText = userPostsCount;
+                document.getElementById('user-reputation').innerText = userReputation;
+            });
+        }
+
+        function updateVisually(card, post) {
+            const userVote = (post.votes && post.votes[CURRENT_USER.id]) || 0;
+            card.querySelector('.rating-count').innerText = post.rating || 0;
+            card.querySelector('.btn-plus').classList.toggle('active', userVote === 1);
+            card.querySelector('.btn-minus').classList.toggle('active', userVote === -1);
+            if (post.communityId) {
+                const currentComm = allCommunities.find(c => c.id === post.communityId);
+                if (currentComm) {
+                    const nameEl = card.querySelector('.author-name');
+                    if (nameEl) nameEl.innerText = `${currentComm.name}`;
+                    
+                    let delBtn = card.querySelector('.delete-post-btn');
+                    if (currentComm.creatorId === CURRENT_USER.id) {
+                        if (!delBtn) {
+                            delBtn = document.createElement('button');
+                            delBtn.className = 'delete-post-btn';
+                            delBtn.style.marginLeft = 'auto';
+                            delBtn.innerText = 'Удалить';
+                            delBtn.onclick = (e) => deletePost(post.id, e);
+                            card.querySelector('.post-footer').insertBefore(delBtn, card.querySelector('.reddit-rating'));
+                        }
+                    } else if (delBtn) {
+                        delBtn.remove();
+                    }
+                }
+            }
+        }
+        
+        function deletePost(postId, event) {
+            event.stopPropagation();
+            if (confirm("Вы действительно хотите удалить этот пост из сообщества?")) {
+                db.collection('posts').doc(postId).delete()
+                .catch(err => alert("Ошибка удаления: " + err.message));
+            }
+        }
+        
+        function createPostHTML(post, isProfile = false) {
+            const card = document.createElement('article');
+            card.className = 'post-container';
+            const suffix = isProfile ? '-prof' : '';
+            card.id = `post-${post.id}${suffix}`;
+            const userVote = (post.votes && post.votes[CURRENT_USER.id]) || 0;
+            const plusActive = userVote === 1 ? 'active' : '';
+            const minusActive = userVote === -1 ? 'active' : '';
+            
+            let headerHTML = '';
+            let deleteBtnHTML = '';
+            if (post.communityId) {
+                const currentComm = allCommunities.find(c => c.id === post.communityId);
+                const activeName = currentComm ? currentComm.name : (post.communityName || 'Сообщество');
+                const commLetter = activeName[0].toUpperCase();
+                if (currentComm && currentComm.creatorId === CURRENT_USER.id) {
+                    deleteBtnHTML = `<button class="delete-post-btn" style="margin-left: auto;" onclick="deletePost('${post.id}', event)">Удалить</button>`;
+                }
+                
+                headerHTML = `
+                    <div class="post-header-meta">${post.author || 'Аноним'}</div>
+                    <div class="post-author-row" onclick="goToFeed('${post.communityId}', '${activeName}'); event.stopPropagation();" style="cursor: pointer;">
+                        <div class="author-avatar" style="background-color: #00acc1;">${commLetter}</div>
+                        <span class="author-name">${activeName}</span>
+                    </div>
+                `;
+            } else {
+                const userLetter = post.author ? post.author[0].toUpperCase() : 'U';
+                headerHTML = `
+                    <div class="post-header-meta" style="color: #0f9d58;">Главная лента</div>
+                    <div class="post-author-row">
+                        <div class="author-avatar" style="background-color: #ff5722;">${userLetter}</div>
+                        <span class="author-name">${post.author || 'Аноним'}</span>
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                ${headerHTML}
+                <h1 class="post-main-title">${post.title}</h1>
+                <p class="post-text">${post.text}</p>
+                <div class="popular-comment-box" id="pop-box-${post.id}${suffix}">
+                    <span class="label-popular">Популярный комментарий</span>
+                    <div class="post-text" style="font-size: 13px; margin: 0;" id="pop-text-${post.id}${suffix}"></div>
+                </div>
+                <div class="post-footer">
+                    <button class="comments-toggle-btn">комментарии</button>
+                    ${deleteBtnHTML}
+                    <div class="reddit-rating">
+                        <button class="vote-button btn-plus ${plusActive}" onclick="changeRating('${post.id}', 1, this)">+</button>
+                        <span class="rating-count" id="rating-${post.id}${suffix}">${post.rating || 0}</span>
+                        <button class="vote-button btn-minus ${minusActive}" onclick="changeRating('${post.id}', -1, this)">-</button>
+                    </div>
+                </div>
+            `;
+            card.querySelector('.comments-toggle-btn').addEventListener('click', () => openCommentsModal(post.id));
+            return card;
+        }
+        
+        function changeRating(postId, intendedVote, btnElement) {
+            const card = btnElement.closest('.post-container');
+            const btnPlus = card.querySelector('.btn-plus');
+            const btnMinus = card.querySelector('.btn-minus');
+            const ratingCount = card.querySelector('.rating-count');
+            
+            let currentRating = parseInt(ratingCount.innerText);
+            let currentVote = 0;
+            if (btnPlus.classList.contains('active')) currentVote = 1;
+            if (btnMinus.classList.contains('active')) currentVote = -1;
+            if (currentVote === intendedVote) {
+                ratingCount.innerText = currentRating - currentVote;
+                btnPlus.classList.remove('active');
+                btnMinus.classList.remove('active');
+            } else {
+                ratingCount.innerText = currentRating - currentVote + intendedVote;
+                btnPlus.classList.toggle('active', intendedVote === 1);
+                btnMinus.classList.toggle('active', intendedVote === -1);
+            }
+
+            const postRef = db.collection('posts').doc(postId);
+            db.runTransaction(transaction => {
+                return transaction.get(postRef).then(doc => {
+                    if (!doc.exists) return;
+                    
+                    const data = doc.data();
+                    const votes = data.votes || {};
+                    const dbCurrentVote = votes[CURRENT_USER.id] || 0; 
+                    let newRating = data.rating || 0;
+                    let newVoteState = 0;
+
+                    if (dbCurrentVote === intendedVote) {
+                        newRating -= dbCurrentVote; 
+                        newVoteState = 0;         
+                    } else {
+                        newRating = newRating - dbCurrentVote + intendedVote; 
+                        newVoteState = intendedVote;
+                    }
+
+                    votes[CURRENT_USER.id] = newVoteState; 
+                    transaction.update(postRef, { rating: newRating, votes: votes });
+                });
+            }).catch(err => console.error(err));
+        }
+
+        function loadPopularComment(postId, isProfile = false) {
+            const suffix = isProfile ? '-prof' : '';
+            db.collection('posts').doc(postId).collection('comments').orderBy('rating', 'desc').limit(1).onSnapshot(snapshot => {
+                const box = document.getElementById(`pop-box-${postId}${suffix}`);
+                const textDiv = document.getElementById(`pop-text-${postId}${suffix}`);
+                if (!snapshot.empty && box && textDiv) {
+                    const comment = snapshot.docs[0].data();
+                    box.style.display = "block";
+                    textDiv.innerHTML = `<strong>${comment.author}:</strong> ${comment.text} <span style="color:#0f9d58; font-weight:bold; margin-left:4px;">(★ ${comment.rating || 0})</span>`;
+                } else if (box) {
+                    box.style.display = "none";
+                }
+            });
+        }
+        
+        function openCommentsModal(postId) {
+            activePostId = postId;
+            cancelReplyTarget();
+            openModal('comments-modal');
+            if (unsubscribeComments) unsubscribeComments();
+
+            unsubscribeComments = db.collection('posts').doc(postId).collection('comments').orderBy('timestamp', 'asc').onSnapshot(snapshot => {
+                const list = document.getElementById('modal-comments-list');
+                list.innerHTML = "";
+                
+                if (!snapshot.empty) {
+                    let allCommentsData = [];
+                    snapshot.forEach(doc => {
+                        let c = doc.data();
+                        c.id = doc.id;
+                        allCommentsData.push(c);
+                    });
+
+                    let rootComments = allCommentsData.filter(c => !c.parentId);
+                    let replyComments = allCommentsData.filter(c => c.parentId);
+
+                    rootComments.sort((a,b) => (b.rating || 0) - (a.rating || 0));
+
+                    rootComments.forEach(root => {
+                        renderCommentDOM(root, false, list);
+                        let directReplies = replyComments.filter(r => r.parentId === root.id);
+                        directReplies.sort((a,b) => a.timestamp - b.timestamp);
+                        
+                        directReplies.forEach(reply => {
+                            renderCommentDOM(reply, true, list);
+                        });
+                    });
+
+                } else {
+                    list.innerHTML = "<div style='color:#757575; font-size:13px;'>Комментариев пока нет. Будьте первым!</div>";
+                }
+            });
+        }
+
+        function renderCommentDOM(comment, isReply, containerElement) {
+            const div = document.createElement('div');
+            div.className = isReply ? 'comment-item is-reply' : 'comment-item';
+            
+            const userVote = (comment.votes && comment.votes[CURRENT_USER.id]) || 0;
+            const plusActive = userVote === 1 ? 'active' : '';
+            const minusActive = userVote === -1 ? 'active' : '';
+            div.innerHTML = `
+                <div class="comment-main-row">
+                    <div class="comment-text-side">
+                        <div class="comment-meta"><strong>${comment.author}</strong></div>
+                        <div>${comment.text}</div>
+                    </div>
+                    <div class="reddit-rating" style="transform: scale(0.85); flex-shrink: 0;">
+                        <button class="vote-button btn-plus ${plusActive}" onclick="changeCommentRating('${activePostId}', '${comment.id}', 1, this)">+</button>
+                        <span class="rating-count">${comment.rating || 0}</span>
+                        <button class="vote-button btn-minus ${minusActive}" onclick="changeCommentRating('${activePostId}', '${comment.id}', -1, this)">-</button>
+                    </div>
+                </div>
+                <div class="comment-actions-row">
+                    <button class="comment-action-btn" onclick="setReplyTarget('${comment.id}', '${comment.author}')">Ответить</button>
+                </div>
+            `;
+            containerElement.appendChild(div);
+        }
+
+        function setReplyTarget(commentId, authorName) {
+            activeCommentReplyParentId = commentId;
+            const indicator = document.getElementById('reply-indicator');
+            const text = document.getElementById('reply-indicator-text');
+            
+            text.innerText = `Ответ пользователю ${authorName}`;
+            indicator.style.display = 'flex';
+            document.getElementById('comment-input').focus();
+        }
+
+        function cancelReplyTarget() {
+            activeCommentReplyParentId = null;
+            document.getElementById('reply-indicator').style.display = 'none';
+        }
+        
+        function changeCommentRating(postId, commentId, intendedVote, btnElement) {
+            const card = btnElement.closest('.reddit-rating');
+            const btnPlus = card.querySelector('.btn-plus');
+            const btnMinus = card.querySelector('.btn-minus');
+            const ratingCount = card.querySelector('.rating-count');
+            
+            let currentRating = parseInt(ratingCount.innerText);
+            let currentVote = 0;
+            if (btnPlus.classList.contains('active')) currentVote = 1;
+            if (btnMinus.classList.contains('active')) currentVote = -1;
+            if (currentVote === intendedVote) {
+                ratingCount.innerText = currentRating - currentVote;
+                btnPlus.classList.remove('active');
+                btnMinus.classList.remove('active');
+            } else {
+                ratingCount.innerText = currentRating - currentVote + intendedVote;
+                btnPlus.classList.toggle('active', intendedVote === 1);
+                btnMinus.classList.toggle('active', intendedVote === -1);
+            }
+
+            const commentRef = db.collection('posts').doc(postId).collection('comments').doc(commentId);
+            db.runTransaction(transaction => {
+                return transaction.get(commentRef).then(doc => {
+                    if (!doc.exists) return;
+                    
+                    const data = doc.data();
+                    const votes = data.votes || {};
+                    const dbCurrentVote = votes[CURRENT_USER.id] || 0; 
+                    let newRating = data.rating || 0;
+                    let newVoteState = 0;
+
+                    if (dbCurrentVote === intendedVote) {
+                        newRating -= dbCurrentVote; 
+                        newVoteState = 0;         
+                    } else {
+                        newRating = newRating - dbCurrentVote + intendedVote; 
+                        newVoteState = intendedVote;
+                    }
+
+                    votes[CURRENT_USER.id] = newVoteState; 
+                    transaction.update(commentRef, { rating: newRating, votes: votes });
+                });
+            }).catch(err => console.error(err));
+        }
+        
+        document.getElementById('submit-comment-btn').addEventListener('click', () => {
+            const text = document.getElementById('comment-input').value.trim();
+            if (!text || !activePostId) return;
+            
+            const commentData = {
+                text: text,
+                author: CURRENT_USER.username,
+                timestamp: Date.now(),
+                rating: 0,
+                votes: {}
+            };
+
+            if (activeCommentReplyParentId) {
+                commentData.parentId = activeCommentReplyParentId;
+            }
+            
+            db.collection('posts').doc(activePostId).collection('comments').add(commentData)
+            .then(() => {
+                document.getElementById('comment-input').value = "";
+                cancelReplyTarget();
+            }).catch(err => alert("Ошибка при отправке: " + err.message));
+        });
+        
+        function toggleMenu() {
+            document.getElementById('drawer').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('show');
+        }
+
+        function switchTab(tabName) {
+            const isHome = tabName === 'home';
+            document.getElementById('btn-home').classList.toggle('active', isHome);
+            document.getElementById('btn-profile').classList.toggle('active', !isHome);
+            document.getElementById('section-home').classList.toggle('active', isHome);
+            document.getElementById('section-profile').classList.toggle('active', !isHome);
+            if (!isHome) {
+                document.getElementById('page-title').innerText = 'Профиль';
+            } else {
+                document.getElementById('page-title').innerText = activeCommunityName ? `${activeCommunityName}` : 'Главная';
+            }
+        }
+
+        function openModal(id) { 
+            document.getElementById(id).style.display = 'flex';
+            if (id === 'create-post-modal') {
+                document.getElementById('post-community-select').value = activeCommunityId || "";
+            }
+        }
+        
+        function closeModal(id) { 
+            document.getElementById(id).style.display = 'none';
+            if (id === 'comments-modal') {
+                cancelReplyTarget();
+                if (unsubscribeComments) unsubscribeComments();
+            }
+        }
+    </script>
+</body>
+</html>
